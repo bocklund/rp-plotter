@@ -1,3 +1,4 @@
+#!/usr/local/bin/python3
 # -*- coding: utf-8 -*-
 
 """
@@ -34,7 +35,6 @@ class SampleData:
 		self.cathode_area = area
 		self.intercept_1_list = []
 		self.intercept_2_list = []
-		self.cell_area = 0.33 #hardcoded for now
 	#create variables for the intercepts. 
 
 
@@ -44,7 +44,8 @@ class NewSample(simpledialog.Dialog): #what happens when the user chooses to cre
 	def body(self, master):
 		#defining options for opening a directory
 		self.dir_opt = options = {}
-		options['initialdir'] = 'C:\\'
+		#options['initialdir'] = 'C:\\'
+		options['initialdir'] = '~/'
 		options['mustexist'] = False
 		options['parent'] = master
 		options['title'] = 'Select EIS Data Directory'
@@ -93,28 +94,38 @@ class Application:
 		self.file_menu.add_command(label="Open...", command=self.open_sample)
 		self.file_menu.add_command(label="Save", command=self.save_sample)
 		self.file_menu.add_separator()
+		
+		#save image menu
+		self.save_image_menu = tk.Menu(self.file_menu, tearoff=0)
+		self.save_image_menu.add_command(label="Save Nyquist Plot", command=self.save_isotherm)
+		self.save_image_menu.add_command(label="Save Nyquist Stack", command=self.save_nyquist_stack)
+		self.save_image_menu.add_command(label="Save Rp Plot", command=self.save_rp)
+		self.file_menu.add_cascade(label="Save Image", menu = self.save_image_menu)
+		
+		self.file_menu.add_separator()
 		self.file_menu.add_command(label="Exit", command=self.parent.destroy)
 		self.menu_bar.add_cascade(label="File", menu=self.file_menu)
 		self.parent.config(menu=self.menu_bar)
 		
 		#set up top level panels        
 		self.grid_padx = '10m'
-		self.grid_pady = '3m'
+		self.grid_pady = '1m'
 		
 		self.data_panel = tk.Frame(self.parent)
 		self.data_panel.grid(row=0, column = 0, padx=self.grid_padx)
 		
 		self.isotherm_plot = tk.Frame(self.parent)
-		self.isotherm_plot.grid(row=0, column = 1, padx=self.grid_padx, pady=self.grid_pady,)
+		self.isotherm_plot.grid(row=0, column = 1, padx=self.grid_padx)
 				
 		self.tools_panel = tk.Frame(self.parent)
-		self.tools_panel.grid(row = 1, column = 0)
+		self.tools_panel.grid(row = 1, column = 0, padx=self.grid_padx)
 		
 		self.rp_plot = tk.Frame(self.parent)
 		self.rp_plot.grid(row = 1, column = 1, padx=self.grid_padx, pady=self.grid_pady)
 		
 		
-		#set up data panel
+		###### set up data panel ######
+		
 		#labels in column 0
 		tk.Label(self.data_panel, text="Temp.", anchor=tk.W).grid(row=0, column=0)
 		tk.Label(self.data_panel, text="400°C", anchor=tk.W).grid(row=1, column=0)
@@ -178,29 +189,43 @@ class Application:
 		self.plot_700_button.grid(row=7, column=3)
 		
 		
-		#button to plot rp	
-		self.plot_rp_button = tk.Button(self.data_panel, text="Plot Rp", command=self.plot_rp, padx='3m', pady='3m').grid(row=8, column = 0, columnspan=2, pady='6m')
+		###### buttons to plot rp ######
+		
+		#generate some labels
+		tk.Label(self.tools_panel, text="Plot Rp", anchor=tk.N).grid(row=0, column=0, columnspan = 3)
+		tk.Label(self.tools_panel, text="Select Marker Color: ", anchor=tk.N).grid(row=1, column=0)
+		tk.Label(self.tools_panel, text="Select Marker Style: ", anchor=tk.N).grid(row=2, column=0)
+		
+		#drop downs for color and symbol
+		self.marker_color = tk.StringVar()
+		self.marker_color.set("black") #initialize
+		self.marker_style = tk.StringVar()
+		self.marker_style.set("o") #initialize
+		self.marker_color_selector = tk.OptionMenu(self.tools_panel, self.marker_color, "black", "red", "blue", "green", "yellow", "magenta", "cyan").grid(row=1, column = 1, columnspan = 2, sticky = tk.W)
+		self.marker_style_selector = tk.OptionMenu(self.tools_panel, self.marker_style, "o", "^", "s", "+", "x", "d", ".").grid(row=2, column = 1, columnspan = 2, sticky = tk.W)
+		
+		#make a new plot checkbox
+		self.new_plot = tk.IntVar()
+		self.new_plot_checkbox = tk.Checkbutton(self.tools_panel, text="Plot Rp on new plot?", variable = self.new_plot).grid(row=3, column = 0, columnspan = 3, sticky = tk.W)
+		self.new_plot.set(1)
+			
+		#finally, make the button
+		self.plot_rp_button = tk.Button(self.tools_panel, text="Plot Rp", command=self.plot_rp, padx='3m', pady='3m').grid(row=4, column = 0, columnspan=3, pady='3m')
 		
 		
-		#buttons to save images
-		self.save_isotherm_button = tk.Button(self.tools_panel, text="Save Nyquist Plot", command=self.save_isotherm, padx='3m', pady='3m').grid(row=0, column = 0, pady='6m', padx='5m')
-		self.save_nyquist_stack_button = tk.Button(self.tools_panel, text="Save Nyquist Stack", command=self.save_nyquist_stack, padx='3m', pady='3m').grid(row=1, column = 0, pady='6m', padx='5m')
-		self.save_rp_button = tk.Button(self.tools_panel, text="Save Rp Plot", command=self.save_rp, padx='3m', pady='3m').grid(row=2, column = 0, pady='6m', padx='5m')
-
-		
-		#set up isotherm figure
-		self.isotherm_figure = Figure(figsize=(5,5), facecolor='w')
+		###### set up isotherm figure ######
+		self.isotherm_figure = Figure(figsize=(6,4), facecolor='w')
 		self.isotherm_axes = self.isotherm_figure.add_subplot(111)
 		self.isotherm_figure.tight_layout(pad = 4) #possibly change to set_tight_layout and repeat below
 		self.isotherm_canvas = FigureCanvasTkAgg(self.isotherm_figure, self.isotherm_plot)
 		self.isotherm_canvas.show()
 		self.isotherm_canvas.get_tk_widget().pack(side=tk.BOTTOM, fill=tk.BOTH, expand=True)
 		
-		#set up rp figure
+		###### set up rp figure ######
 		self.rp_figure = Figure(figsize=(7,5), facecolor='w')
 		self.rp_axes = self.rp_figure.add_subplot(111)
 		self.rp_axes_twin = self.rp_axes.twiny()
-		self.rp_figure.tight_layout(pad = 4)
+		self.rp_figure.tight_layout(pad = 3.5)
 		self.rp_canvas = FigureCanvasTkAgg(self.rp_figure, self.rp_plot)
 		self.rp_canvas.show()
 		self.rp_canvas.get_tk_widget().pack(side=tk.BOTTOM, fill=tk.BOTH, expand=True)
@@ -210,27 +235,28 @@ class Application:
 		self.get_entries()
 		temperatures, recip_temperatures, asr = get_rp_plot_data()
 		
-		#clear plot
-		self.rp_axes.clear()
-		self.rp_axes_twin.clear()
-		#draw plot
+		if self.new_plot.get():
+			#clear plot
+			self.rp_axes.clear()
+			self.rp_axes_twin.clear()
+			#draw plot
 		
-		self.rp_axes.set_title(r"R$\mathregular{_p}$ of " + sample_data.sample_name, y=1.16)
+		#self.rp_axes.set_title(r"R$\mathregular{_p}$ of " + sample_data.sample_name, y=1.16)
 		self.rp_axes.set_xlabel(r"Temperature $\mathregular{(1000/T)\ (K}^{-1}\mathregular{)}$")
 		self.rp_axes.set_ylabel(r"R$\mathregular{_p}$ $\mathregular{(\Omega cm^2)}$")
 		self.rp_axes.set_yscale('log')
 		self.rp_axes.yaxis.set_major_formatter(ScalarFormatter()) 
 		self.rp_axes.ticklabel_format(axis='y', style='plain')
-		self.rp_axes.axis([1, 1.55, 0.05, 15])
+		self.rp_axes.axis([1, 1.55, 0.011, 15])
 		self.rp_axes.tick_params(direction='out', which='both')
 		self.rp_axes.axhline(y=0.1, linestyle='--', color='0.6')
 		#plot
-		self.rp_axes.plot(recip_temperatures, asr, marker='.', markersize=9, color='black', linestyle="None")
-		
+		self.rp_axes.plot(recip_temperatures, asr, marker=self.marker_style.get(), markersize=6, color=self.marker_color.get(), linestyle="None", label=sample_data.sample_name)
+		self.rp_axes.legend(loc='upper left', numpoints = 1, fontsize='small',)
 		
 		#twin axes to go to celsius
 		celsius_tick_locations = recip_temperatures
-		self.rp_axes_twin.axis([1, 1.55, 0.05, 15])
+		self.rp_axes_twin.axis([1, 1.55, 0.011, 15])
 		self.rp_axes_twin.tick_params(direction='out', which='both')
 		self.rp_axes_twin.set_xticks(celsius_tick_locations)
 		self.rp_axes_twin.set_xticklabels(temperatures)
@@ -314,17 +340,7 @@ class Application:
 			else:
 				ymax = ymin + (xmax-xmin)
 			self.nyquist_stack_600_axes.axis([xmin, xmax, ymin, ymax])	
-			self.nyquist_stack_600_axes.tick_params(direction='out')
-			
-			#remove some labels
-			xtick_list = self.nyquist_stack_600_axes.get_xticks()
-			xtick_list = xtick_list[::2]
-			self.nyquist_stack_600_axes.set_xticks(xtick_list)
-			
-			
-			ytick_list = self.nyquist_stack_600_axes.get_yticks()
-			ytick_list = ytick_list[::2]
-			self.nyquist_stack_600_axes.set_yticks(ytick_list)		
+			self.nyquist_stack_600_axes.tick_params(direction='out')	
 			#label peaks
 
 		if sample_data : 			
@@ -344,34 +360,7 @@ class Application:
 				ymax = ymin + (xmax-xmin)
 			self.nyquist_stack_700_axes.axis([xmin, xmax, ymin, ymax])	
 			self.nyquist_stack_700_axes.tick_params(direction='out')
-			
-			#set remove inner tick labels
-			xtick_list = self.nyquist_stack_700_axes.get_xticks()
-			xtick_labels = []
-			for n in xtick_list:
-				if n==xmax:
-					xtick_labels.append(xmax)
-				elif n==xmin:
-					xtick_labels.append(xmin)
-				else:
-					xtick_labels.append('')
-			self.nyquist_stack_700_axes.set_xticklabels(xtick_labels)
-			
-			ytick_list = self.nyquist_stack_700_axes.get_yticks()
-			'''ytick_labels = []
-			for n in ytick_list:
-				if n == ytick_list[1]:
-					ytick_labels.append(ytick_list[1])
-				elif n == ytick_list[len(ytick_list)-2]:
-					ytick_labels.append(ytick_list[len(ytick_list)-2])
-				else:
-					ytick_labels.append('')
-			self.nyquist_stack_700_axes.set_yticklabels(ytick_labels)'''
-			ytick_list = ytick_list[::2]
-			self.nyquist_stack_700_axes.set_yticks(ytick_list)
-#			ticks_list = self.nyquist_stack_700_axes.get_xticks()
-#			ticks_list = [ticks_list[0], ticks_list[len(ticks_list)-1]]
-#			self.nyquist_stack_700_axes.set_xticks(ticks_list)
+		
 			#label peaks
 
 
@@ -445,7 +434,8 @@ class Application:
 		self.file_opt = options = {}
 		options['defaultextension'] = '.p'
 		options['filetypes'] = [('Resistance Plotter Files', '.p')]
-		options['initialdir'] = 'C:\\'
+		#options['initialdir'] = 'C:\\'
+		options['initialdir'] = '~/'
 		options['initialfile'] = sample_data.sample_name + '.p'
 		options['parent'] = root
 		options['title'] = 'Save Resistance Plotter File'
@@ -471,7 +461,8 @@ class Application:
 		self.file_opt = options = {}
 		options['defaultextension'] = '.png'
 		options['filetypes'] = [('Portable Network Graphics', '.png'), ('Portable Document Format','.pdf'), ('Encapsulated PostScript','.eps')]
-		options['initialdir'] = 'C:\\'
+		#options['initialdir'] = 'C:\\'
+		options['initialdir'] = '~/'
 		options['initialfile'] = sample_data.sample_name + "_rp" + '.png'
 		options['parent'] = root
 		options['title'] = 'Save Rp Plot'
@@ -495,7 +486,8 @@ class Application:
 		self.file_opt = options = {}
 		options['defaultextension'] = '.png'
 		options['filetypes'] = [('Portable Network Graphics', '.png'), ('Portable Document Format','.pdf'), ('Encapsulated PostScript','.eps')]
-		options['initialdir'] = 'C:\\'
+		options['initialdir'] = '~/'
+		#options['initialdir'] = 'C:\\'
 		options['initialfile'] = sample_data.sample_name + "_nyquist_" + self.active_isotherm_temperature +'.png'
 		options['parent'] = root
 		options['title'] = 'Save Nyquist Plot'
@@ -519,9 +511,9 @@ class Application:
 	def save_nyquist_stack(self):
 		#grid the figure
 		self.nyquist_stack_plot = tk.Frame(self.parent)
-		self.nyquist_stack_plot.grid(row=0, column = 2, padx=self.grid_padx, pady=self.grid_pady)
+		#self.nyquist_stack_plot.grid(row=0, column = 2, padx=self.grid_padx, pady=self.grid_pady)
 		#set up nyquist stack figure
-		self.nyquist_stack_figure = Figure(figsize=(5,5), facecolor='w')
+		self.nyquist_stack_figure = Figure(figsize=(6,6), facecolor='w')
 		self.nyquist_stack_500_axes = self.nyquist_stack_figure.add_axes([.14, .15, .8, .8])
 		self.nyquist_stack_600_axes = self.nyquist_stack_figure.add_axes([.46, .46, .45, .45])
 		self.nyquist_stack_700_axes = self.nyquist_stack_figure.add_axes([.65, .65, .23, .23])
@@ -543,7 +535,8 @@ class Application:
 		self.file_opt = options = {}
 		options['defaultextension'] = '.png'
 		options['filetypes'] = [('Portable Network Graphics', '.png'), ('Portable Document Format','.pdf'), ('Encapsulated PostScript','.eps')]
-		options['initialdir'] = 'C:\\'
+		#options['initialdir'] = 'C:\\'
+		options['initialdir'] = '~/'
 		options['initialfile'] = sample_data.sample_name + "_nyquist_stack" +'.png'
 		options['parent'] = root
 		options['title'] = 'Save Nyquist Stack Plot'
@@ -568,7 +561,8 @@ class Application:
 		self.file_opt = options = {}
 		options['defaultextension'] = '.p'
 		options['filetypes'] = [('Resistance Plotter Files', '.p')]
-		options['initialdir'] = 'C:\\'
+		#options['initialdir'] = 'C:\\'
+		options['initialdir'] = '~/'
 		options['initialfile'] = ''
 		options['parent'] = root
 		options['title'] = 'Open Resistance Plotter File'
@@ -623,7 +617,7 @@ def get_rp_plot_data():
 	
 	raw_rp = np.array(sample_data.intercept_2_list) - np.array(sample_data.intercept_1_list)
 	
-	asr = raw_rp/2*0.33
+	asr = raw_rp/2*sample_data.cathode_area
 	
 	temperatures = np.array([400, 450, 500, 550, 600, 650, 700])
 	temperatures_kelvin = temperatures + 273.15
@@ -650,7 +644,7 @@ def initialize():
 #main	
 	
 #create initial data, will be moved to the "New" menu item later
-sample_data = 0 #SampleData(path = r"C:\Users\Brandon\Dropbox\SOFCs\Data\Impedance Data\ELD-LSCF\ELD-LSCF B4 Raw Data", name = r"LSCF-(3.5)482 (B4)")#hardcoded path and name for now
+sample_data = 0 
 
 
 root = tk.Tk()
