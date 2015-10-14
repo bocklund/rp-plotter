@@ -95,6 +95,12 @@ class Application:
 		self.file_menu.add_command(label="Save", command=self.save_sample)
 		self.file_menu.add_separator()
 		
+		self.parent.bind("<Command-o>", self.open_sample)
+		self.parent.bind("<Command-n>", self.new_sample)
+		
+		
+		
+		
 		#save image menu
 		self.save_image_menu = tk.Menu(self.file_menu, tearoff=0)
 		self.save_image_menu.add_command(label="Save Nyquist Plot", command=self.save_isotherm)
@@ -243,7 +249,7 @@ class Application:
 		
 		#self.rp_axes.set_title(r"R$\mathregular{_p}$ of " + sample_data.sample_name, y=1.16)
 		self.rp_axes.set_xlabel(r"Temperature $\mathregular{(1000/T)\ (K}^{-1}\mathregular{)}$")
-		self.rp_axes.set_ylabel(r"R$\mathregular{_p}$ $\mathregular{(\Omega cm^2)}$")
+		self.rp_axes.set_ylabel(r"R$\mathregular{_p}$ $\mathregular{(\Omega cm^2\!)}$")
 		self.rp_axes.set_yscale('log')
 		self.rp_axes.yaxis.set_major_formatter(ScalarFormatter()) 
 		self.rp_axes.ticklabel_format(axis='y', style='plain')
@@ -283,8 +289,8 @@ class Application:
 			#plot new plot
 
 			self.isotherm_axes.set_title(sample_data.sample_name + " at " + temperature, y=1.08)
-			self.isotherm_axes.set_xlabel("Z\' ($\mathregular{\Omega cm^2}$)")
-			self.isotherm_axes.set_ylabel("-Z\'\' ($\mathregular{\Omega cm^2}$)")
+			self.isotherm_axes.set_xlabel("Z\' $\mathregular{(\Omega cm^2\!)}$")
+			self.isotherm_axes.set_ylabel("-Z\'\' $\mathregular{(\Omega cm^2\!)}$")
 			self.isotherm_axes.set_aspect('equal',)# adjustable='box')
 			self.isotherm_axes.plot(raw_data.iloc[:,1], raw_data.iloc[:,2], marker='.', markersize=9, color='black', linestyle="None")
 			#square the axes
@@ -365,7 +371,7 @@ class Application:
 
 
 			
-	def new_sample(self):
+	def new_sample(self, event=None):
 		NewSample(self.parent)
 			
 	def eis_file_path(self, button_number, dir_path):
@@ -524,8 +530,8 @@ class Application:
 		self.nyquist_stack_canvas.show()
 		self.nyquist_stack_canvas.get_tk_widget().pack(side=tk.BOTTOM, fill=tk.BOTH, expand=True)	
 		
-		self.nyquist_stack_500_axes.set_xlabel("Z\' ($\mathregular{\Omega cm^2}$)")
-		self.nyquist_stack_500_axes.set_ylabel("-Z\'\' ($\mathregular{\Omega cm^2}$)")
+		self.nyquist_stack_500_axes.set_xlabel("Z\' $\mathregular{(\Omega cm^2\!)}$")
+		self.nyquist_stack_500_axes.set_ylabel("-Z\'\' $\mathregular{(\Omega cm^2\!)}$")
 		
 		self.plot_nyquist_stack()
 		
@@ -555,7 +561,7 @@ class Application:
 			pass
 		self.nyquist_stack_plot.grid_forget()
 		self.nyquist_stack_plot.destroy()
-	def open_sample(self):
+	def open_sample(self, event=None):
 			
 		#defining options for opening a file
 		self.file_opt = options = {}
