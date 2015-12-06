@@ -26,9 +26,6 @@ from matplotlib.figure import Figure
 import pickle
 from matplotlib.ticker import ScalarFormatter  #needed to format y axis log to scalar
 
-
-
-
 #class Electrolyte:
 
 #class Miec:
@@ -111,6 +108,7 @@ class NewSample(simpledialog.Dialog):
         t_max = int(self.temp_max_entry.get())
         t_step = int(self.temp_step_entry.get())
         temperatures = list(range(t_min, t_max+1, t_step))
+        if sample_data: self.tear_down_data_panel()
         global sample_data
         sample_data = SampleData(path, name, area, temperatures)
         app.set_up_data_panel()
@@ -237,7 +235,8 @@ class Application:
         
         row = 1
         for temperature in sample_data.temperature_range_text:
-            label = tk.Label(self.data_panel, text=temperature, anchor=tk.W).grid(row=row, column=0)
+            label = tk.Label(self.data_panel, text=temperature, anchor=tk.W)
+            label.grid(row=row, column=0)
             low_intercept = tk.Entry(self.data_panel, width=6)
             high_intercept = tk.Entry(self.data_panel, width=6)
             low_intercept.grid(row=row, column = 1)
@@ -275,12 +274,16 @@ class Application:
         First, iteratively destroy all of the widgets in the list.
         Second, clear the lists.
         """
-                
         for label, low_int, high_int, button in zip(self.label_list, self.low_intercept_entry_list, self.high_intercept_entry_list, self.plot_button_list):
+            label.grid_forget()
+            low_int.grid_forget()
+            high_int.grid_forget()
+            button.grid_forget()
             label.destroy()
             low_int.destroy()
             high_int.destroy()
-            button.destroy()          
+            button.destroy()  
+                    
         self.label_list = []
         self.low_intercept_entry_list = []
         self.high_intercept_entry_list = []
@@ -333,7 +336,6 @@ class Application:
             self.isotherm_axes.clear()
             
             #get new data
-            print(button_number)
             file_path, temperature = self.eis_file_path(button_number, sample_data.dir_path)
             raw_data = get_isotherm_plot_data(file_path)
             
@@ -556,6 +558,7 @@ class Application:
             global sample_data
             sample_data = pickle.load(file)
             file.close()
+            if sample_data: self.tear_down_data_panel()
             self.set_up_data_panel()
             self.set_entries()
         except TypeError:
