@@ -5,13 +5,14 @@
 ######## TODO ########
 - add Titles to data entry and tools grid slots
 - make the plots better looking
-- suggest low and high intercept values
+- suggest low and high intercept values (fit a high order polynomial)
 - programatically set the width of the rp plot based on the input recip values
 - add choice of MIEC and Electrolyte
 - set program up to work cross platform with file handling. 'initialdir' option.
 - fix twin axis for Rp plot
 - rework Nyquist stack plot
 - Add peak labeling for isotherms and nyquist stack
+- handle hidden files
 """
 
 import pandas as pd
@@ -47,11 +48,12 @@ class SampleData:
     high_intercept_entries -- list of Tkinter entry fields for high intercepts
     """
     
-    def __init__(self, path, name, area, temp_range): #add more like intercept points later
+    def __init__(self, path, name, area, temp_range, auto_generated_file): #add more like intercept points later
         """ Set variables from new or opened sample. """
         self.dir_path = path
         self.sample_name = name
         self.cathode_area = area
+        self.auto_generated = auto_generated_file
         self.intercept_1_list = []
         self.intercept_2_list = []
         self.temperature_range = temp_range
@@ -80,7 +82,8 @@ class NewSample(simpledialog.Dialog):
         tk.Label(master, text="Minimum Temperature:",).grid(row=2)
         tk.Label(master, text="Maximum Temperature:",).grid(row=3)
         tk.Label(master, text="Temperature Step Size:",).grid(row=4)
-        tk.Label(master, text="Directory Path:").grid(row=5)
+        tk.Label(master, text="Automatically Collected File? ").grid(row=5)
+        tk.Label(master, text="Directory Path:").grid(row=6)
         
         self.name_entry = tk.Entry(master)
         self.area_entry = tk.Entry(master)
@@ -88,14 +91,21 @@ class NewSample(simpledialog.Dialog):
         self.temp_max_entry = tk.Entry(master)
         self.temp_step_entry = tk.Entry(master)
         self.path_entry = tk.Entry(master)
-
+        
+        
         self.name_entry.grid(row=0, column=1)
         self.area_entry.grid(row=1, column=1)
         self.temp_min_entry.grid(row=2, column=1)
         self.temp_max_entry.grid(row=3, column=1)
         self.temp_step_entry.grid(row=4, column=1)
-        self.path_entry.grid(row=5, column=1)
-        self.browse_button = tk.Button(master, text="Browse", command=self.browse).grid(row=5, column = 2)
+        self.path_entry.grid(row=6, column=1)
+        self.browse_button = tk.Button(master, text="Browse", command=self.browse).grid(row=6, column = 2)
+        
+        self.auto_generated_file = tk.IntVar()
+        self.auto_generated_checkbox = tk.Checkbutton(
+            master,  
+            variable = self.auto_generated_file,)
+        self.auto_generated_checkbox.grid(row=5, column=1)
         
         return self.name_entry # initial focus
 
@@ -108,9 +118,10 @@ class NewSample(simpledialog.Dialog):
         t_max = int(self.temp_max_entry.get())
         t_step = int(self.temp_step_entry.get())
         temperatures = list(range(t_min, t_max+1, t_step))
-        if sample_data: self.tear_down_data_panel()
+        auto_gen = self.auto_generated_file.get()
+        if sample_data: app.tear_down_data_panel()
         global sample_data
-        sample_data = SampleData(path, name, area, temperatures)
+        sample_data = SampleData(path, name, area, temperatures,auto_gen)
         app.set_up_data_panel()
         
     def browse(self):
@@ -251,7 +262,10 @@ class Application:
             elif row == 6: plot_button = tk.Button(self.data_panel, text='Plot', takefocus=0, command=lambda: self.plot_isotherm(6))
             elif row == 7: plot_button = tk.Button(self.data_panel, text='Plot', takefocus=0, command=lambda: self.plot_isotherm(7))
             elif row == 8: plot_button = tk.Button(self.data_panel, text='Plot', takefocus=0, command=lambda: self.plot_isotherm(8))
-            elif row == 9: plot_button = tk.Button(self.data_panel, text='Plot', takefocus=0, command=lambda: self.plot_isotherm(9))
+            elif row == 9: plot_button = tk.Button(self.data_panel,
+                                                   text='Plot', takefocus=0,
+                                                   command=lambda:
+                                                   self.plot_isotherm(9))
             elif row ==10: plot_button = tk.Button(self.data_panel, text='Plot', takefocus=0, command=lambda: self.plot_isotherm(10))
             elif row ==11: plot_button = tk.Button(self.data_panel, text='Plot', takefocus=0, command=lambda: self.plot_isotherm(11))
             elif row ==12: plot_button = tk.Button(self.data_panel, text='Plot', takefocus=0, command=lambda: self.plot_isotherm(12))
@@ -416,6 +430,7 @@ class Application:
             
     def eis_file_path(self, button_number, dir_path):
         """Return EIS file path and the temperature for the button pressed. """
+        #print(os.path.join(dir_path, os.listdir(dir_path)[button_number-1])) #debug file location
         file_path = os.path.join(dir_path, os.listdir(dir_path)[button_number-1])
         temperature = sample_data.temperature_range_text[button_number-1]
         
@@ -579,12 +594,27 @@ class Application:
 
 def get_isotherm_plot_data(file_location):
     """ Return impedance data read from file on disk. Positive imaginary Z. """
-    raw_impedance_data = pd.read_csv(filepath_or_buffer=file_location ,delim_whitespace=True, index_col=0,header=None, skiprows=0, names=[
-        'Frequency/Hz',
-        'impedance R/Ohm',
-        'impedance I/Ohm',])
-    #raw_impedance_data.info() #check info for debugging
-    raw_impedance_data.iloc[:,1] *= -1.0 #change Z'' to -Z'' for plot readability
+    
+    if sample_data.auto_generated:
+        raw_impedance_data = pd.read_csv(filepath_or_buffer=file_location ,delim_whitespace=True, index_col=0,header=None, skiprows=0, names=[
+            'Frequency/Hz',
+            'impedance R/Ohm',
+            'impedance I/Ohm',])
+        raw_impedance_data.iloc[:,1] *= -1.0 #change Z'' to -Z'' for plot readability
+    else:
+        raw_impedance_data = pd.read_csv(filepath_or_buffer=file_location ,delim_whitespace=True, index_col=0,header=None, skiprows=19, names=['Number',
+		    'Frequency/Hz',
+	    	'impedance R/Ohm',
+	    	'impedance I/Ohm',
+	    	'Significance',
+	    	'Time/s'])
+        raw_impedance_data.iloc[:,2] *= -1.0 #change Z'' to -Z'' for plot readability
+        raw_impedance_data.iloc[:,0] = raw_impedance_data.iloc[:,1]
+        raw_impedance_data.iloc[:,1] = raw_impedance_data.iloc[:,2]
+
+    #raw_impedance_data.info() #use to debug if no data is being read
+    
+    
     return raw_impedance_data
     
     
