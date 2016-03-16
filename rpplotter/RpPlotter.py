@@ -1,20 +1,6 @@
 #!/usr/local/bin/python3
 # -*- coding: utf-8 -*-
 
-"""
-######## TODO ########
-- add Titles to data entry and tools grid slots
-- make the plots better looking
-- suggest low and high intercept values (fit a high order polynomial)
-- programatically set the width of the rp plot based on the input recip values
-- add choice of MIEC and Electrolyte
-- set program up to work cross platform with file handling. 'initialdir' option.
-- fix twin axis for Rp plot
-- rework Nyquist stack plot
-- Add peak labeling for isotherms and nyquist stack
-- handle hidden files
-"""
-
 import pandas as pd
 import numpy as np
 import os
